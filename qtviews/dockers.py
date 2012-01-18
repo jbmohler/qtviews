@@ -21,7 +21,7 @@ class Docker(QtGui.QDockWidget):
         QtGui.QDockWidget.__init__(self)
         self.child = child
         self.mainWindow = mainWindow
-        self.setObjectName(child.objectName())
+        self.setObjectName(child._docker_meta.title)
         self.setWidget(child)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -48,10 +48,21 @@ class TabbedWorkspaceMixin(object):
         c = klass(settingsKey)
         self.addWorkspaceWindow(c.widget(), c.title(), c.settingsKey)
 
+    def addWorkspaceWindow(self, widget, title, appType, settingsKey=None):
+        """
+        Add a dock managed window.  Tabify or dock as according to settings.
+        """
+        widget._docker_meta = WindowMeta(title, appType, settingsKey)
+        self.workspace.addTab(widget, name)
+        self.workspace.setCurrentWidget(widget)
+        widget.setWindowTitle(name)
+        widget.show()
+        widget.setFocus()
+
     def workspaceWindowByKey(self, settingsKey):
         tabs = [tab for tab in self.tabsCollection() if
-                tab.pyhacc_ui_id==settingsKey]
-        docks = [d for d in self.docked if d.pyhacc_ui_id==settingsKey]
+                tab._docker_meta.settingsKey==settingsKey]
+        docks = [d for d in self.docked if d._docker_meta.settingsKey==settingsKey]
         if len(tabs+docks):
             return (tabs+docks)[0]
         return None
@@ -82,8 +93,8 @@ class TabbedWorkspaceMixin(object):
         #a.triggered.connect(lambda check: self.closeTab(self.workspace.currentIndex()))
 
         a = self.menu.addAction("Tabify")
-        a.triggered.connect(lambda check:
-                self.undockWorkspaceWindow(w.pyhacc_ui_id))
+        a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+                self.undockWorkspaceWindow(key))
 
         #self.menu.addAction(self.workspace.currentWidget().model.renameAction)
         self.menu.popup(self.workspace.mapToGlobal(pnt))
@@ -92,13 +103,15 @@ class TabbedWorkspaceMixin(object):
         tb = self.workspace.tabBar()
         if tb.tabAt(pnt) == self.workspace.currentIndex():
             self.menu = QtGui.QMenu()
+
+            w = self.workspace.currentWidget()
             # rename, close, dock
             a = self.menu.addAction("Close")
             a.triggered.connect(lambda check: self.closeTab(self.workspace.currentIndex()))
 
             a = self.menu.addAction("Add docked")
-            a.triggered.connect(lambda check:
-                    self.dockWorkspaceWindow(self.workspace.currentWidget().pyhacc_ui_id))
+            a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+                    self.dockWorkspaceWindow(key))
 
             #self.menu.addAction(self.workspace.currentWidget().model.renameAction)
             self.menu.popup(self.workspace.mapToGlobal(pnt))
@@ -117,23 +130,17 @@ class TabbedWorkspaceMixin(object):
             action = self.windowMenu.addAction(text)
             action.setCheckable(True)
             action.setChecked(child == self.workspace.currentWidget())
-            action.triggered.connect(lambda checked, x=child.pyhacc_ui_id: self.selectTab(x))
+            action.triggered.connect(lambda checked,
+                    key=child._docker_meta.settingsKey: self.selectTab(key))
 
     def tabsCollection(self):
         for i in range(self.workspace.count()):
             yield self.workspace.widget(i)
 
-    def selectTab(self,identifier):
-        desired = [tab for tab in self.tabsCollection() if tab.pyhacc_ui_id==identifier]
+    def selectTab(self, key):
+        desired = [tab for tab in self.tabsCollection() if
+                tab._docker_meta.settingsKey==key]
         if len(desired):
             self.workspace.setCurrentWidget(desired[0])
         return desired[0] if len(desired)>0 else None
 
-    def addWorkspaceWindow(self, widget, name, identifier=None):
-        widget.pyhacc_ui_id = identifier if identifier is not None else name
-        #widget.chooser = WindowChooser(self,widget)
-        self.workspace.addTab(widget, name)
-        self.workspace.setCurrentWidget(widget)
-        widget.setWindowTitle(name)
-        widget.show()
-        widget.setFocus()
