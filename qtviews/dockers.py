@@ -21,7 +21,8 @@ class Docker(QtGui.QDockWidget):
         QtGui.QDockWidget.__init__(self)
         self.child = child
         self.mainWindow = mainWindow
-        self.setObjectName(child._docker_meta.title)
+        child._docker = self
+        self.setWindowTitle(child._docker_meta.title)
         self.setWidget(child)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -29,6 +30,9 @@ class Docker(QtGui.QDockWidget):
                 self.mainWindow.workspaceContextMenu(self.child, pnt))
 
 class TabbedWorkspaceMixin(object):
+    """
+    This class is designed to be a mix-in for QtGui.QMainWindow
+    """
     def initTabbedWorkspace(self):
         self.workspace = QtGui.QTabWidget()
         self.setCentralWidget(self.workspace)
@@ -39,6 +43,8 @@ class TabbedWorkspaceMixin(object):
         self.workspace.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.workspace.customContextMenuRequested.connect(self.workspaceContextMenu01)
 
+        self.docked = []
+
     def viewFactory(self, klass, settingsKey=None):
         """
         :param klass: view factory function for specific views
@@ -48,16 +54,27 @@ class TabbedWorkspaceMixin(object):
         c = klass(settingsKey)
         self.addWorkspaceWindow(c.widget(), c.title(), c.settingsKey)
 
-    def addWorkspaceWindow(self, widget, title, appType, settingsKey=None):
+    def addWorkspaceWindow(self, widget, title=None, appType=None, settingsKey=None):
         """
         Add a dock managed window.  Tabify or dock as according to settings.
         """
+        if title is None and hasattr(widget, 'title'):
+            title = widget.title
+        if appType is None and hasattr(widget, 'appType'):
+            appType = widget.appType
+        if settingsKey is None and hasattr(widget, 'settingsKey'):
+            settingsKey = widget.settingsKey
         widget._docker_meta = WindowMeta(title, appType, settingsKey)
-        self.workspace.addTab(widget, name)
-        self.workspace.setCurrentWidget(widget)
-        widget.setWindowTitle(name)
-        widget.show()
-        widget.setFocus()
+        self._addToTab(widget)
+
+    def _addToTab(self, w):
+        self.workspace.addTab(w, w._docker_meta.title)
+        self.workspace.setCurrentWidget(w)
+        w.show()
+        w.setFocus()
+
+    def _addDocked(self, w):
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, Docker(self, w))
 
     def workspaceWindowByKey(self, settingsKey):
         tabs = [tab for tab in self.tabsCollection() if
@@ -74,7 +91,7 @@ class TabbedWorkspaceMixin(object):
         w = self.workspaceWindowByKey(settingsKey)
         if w is not None:
             self.docked.append(w)
-            self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, Docker(self, w))
+            self._addDocked(w)
 
     def undockWorkspaceWindow(self, settingsKey):
         """
@@ -83,8 +100,10 @@ class TabbedWorkspaceMixin(object):
         """
         w = self.workspaceWindowByKey(settingsKey)
         if w is not None:
+            self.removeDockWidget(w._docker)
+            w._docker = None
             self.docked.remove(w)
-            self.addWorkspaceWindow(w, w.objectName(), "something")
+            self._addToTab(w)
 
     def workspaceContextMenu(self, w, pnt):
         self.menu = QtGui.QMenu()
@@ -96,8 +115,11 @@ class TabbedWorkspaceMixin(object):
         a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
                 self.undockWorkspaceWindow(key))
 
-        #self.menu.addAction(self.workspace.currentWidget().model.renameAction)
-        self.menu.popup(self.workspace.mapToGlobal(pnt))
+        a = self.menu.addAction("Rename")
+        a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+                self.renameWindow(key))
+
+        self.menu.popup(w._docker.mapToGlobal(pnt))
 
     def workspaceContextMenu01(self, pnt):
         tb = self.workspace.tabBar()
@@ -113,8 +135,28 @@ class TabbedWorkspaceMixin(object):
             a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
                     self.dockWorkspaceWindow(key))
 
-            #self.menu.addAction(self.workspace.currentWidget().model.renameAction)
+            a = self.menu.addAction("Rename")
+            a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+                    self.renameWindow(key))
             self.menu.popup(self.workspace.mapToGlobal(pnt))
+
+    def renameWindow(self, key):
+        w = self.workspaceWindowByKey(key)
+
+        x = QtGui.QDialog()
+        h = QtGui.QVBoxLayout(x)
+        form = QtGui.QFormLayout()
+        h.addLayout(form)
+        edit = QtGui.QLineEdit()
+        edit.setText(w._docker_meta.title)
+        form.addRow('&Title', edit)
+        b = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel) 
+        h.addWidget(b)
+        b.accepted.connect(x.accept)
+        b.rejected.connect(x.reject)
+        x.show()
+        if x.exec_() == QtGui.QDialog.Accepted:
+            w._docker_meta.title = edit.text()
 
     def closeTab(self, index):
         self.workspace.removeTab(index)
