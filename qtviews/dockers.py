@@ -16,6 +16,13 @@ class WindowMeta(object):
         else:
             self.settingsKey = settingsKey
 
+    def is_detached(self):
+        return self.settingsKey.startswith('detached_')
+
+    def detach(self):
+        import uuid
+        self.settingsKey = 'detached_{0}'.format(uuid.uuid1().hex)
+
 class Docker(QtGui.QDockWidget):
     def __init__(self, mainWindow, child):
         QtGui.QDockWidget.__init__(self)
@@ -27,7 +34,7 @@ class Docker(QtGui.QDockWidget):
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(lambda pnt: 
-                self.mainWindow.workspaceContextMenu(self.child, pnt))
+                self.mainWindow.workspaceContextMenuDocked(self.child, pnt))
 
 class TabbedWorkspaceMixin(object):
     """
@@ -41,7 +48,7 @@ class TabbedWorkspaceMixin(object):
         self.workspace.tabCloseRequested.connect(self.closeTab)
 
         self.workspace.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.workspace.customContextMenuRequested.connect(self.workspaceContextMenu01)
+        self.workspace.customContextMenuRequested.connect(self.workspaceContextMenuTabbed)
 
         self.docked = []
 
@@ -105,40 +112,62 @@ class TabbedWorkspaceMixin(object):
             self.docked.remove(w)
             self._addToTab(w)
 
-    def workspaceContextMenu(self, w, pnt):
+    def addSharedContextActions(self, w, menu):
+        # rename, close, detach from command
+        a = menu.addAction("Close")
+        a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+                self.closeWindow(w._docker_meta.settingsKey))
+
+        a = menu.addAction("Rename")
+        a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+                self.renameWindow(key))
+
+        if not w._docker_meta.is_detached():
+            a = menu.addAction("Detach Visual Settings")
+            a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+                    self.detachVisualSettings(key))
+
+    def workspaceContextMenuDocked(self, w, pnt):
         self.menu = QtGui.QMenu()
-        # rename, close, dock
-        #a = self.menu.addAction("Close")
-        #a.triggered.connect(lambda check: self.closeTab(self.workspace.currentIndex()))
 
         a = self.menu.addAction("Tabify")
         a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
                 self.undockWorkspaceWindow(key))
 
-        a = self.menu.addAction("Rename")
-        a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
-                self.renameWindow(key))
+        self.addSharedContextActions(w, self.menu)
 
         self.menu.popup(w._docker.mapToGlobal(pnt))
 
-    def workspaceContextMenu01(self, pnt):
+    def workspaceContextMenuTabbed(self, pnt):
         tb = self.workspace.tabBar()
-        if tb.tabAt(pnt) == self.workspace.currentIndex():
+        if self.workspace.currentIndex() > 0 and tb.tabAt(pnt) == self.workspace.currentIndex():
             self.menu = QtGui.QMenu()
 
             w = self.workspace.currentWidget()
-            # rename, close, dock
-            a = self.menu.addAction("Close")
-            a.triggered.connect(lambda check: self.closeTab(self.workspace.currentIndex()))
-
             a = self.menu.addAction("Add docked")
             a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
                     self.dockWorkspaceWindow(key))
 
-            a = self.menu.addAction("Rename")
-            a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
-                    self.renameWindow(key))
+            self.addSharedContextActions(w, self.menu)
+            
             self.menu.popup(self.workspace.mapToGlobal(pnt))
+
+    def detachVisualSettings(self, key):
+        w = self.workspaceWindowByKey(key)
+        w._docker_meta.detach()
+
+    def closeWindow(self, key):
+        for i in range(self.workspace.count()):
+            w = self.workspace.widget(i)
+            if w._docker_meta.settingsKey == key:
+                self.closeTab(i)
+                break
+
+        for w in self.docked:
+            if w._docker_meta.settingsKey == key:
+                self.removeDockWidget(w._docker)
+                self.docked.remove(w)
+                break
 
     def renameWindow(self, key):
         w = self.workspaceWindowByKey(key)
