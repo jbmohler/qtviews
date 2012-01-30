@@ -29,13 +29,18 @@ class Main(QtGui.QMainWindow, TabbedWorkspaceMixin):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
         self.initTabbedWorkspace()
+        self.updateViewFactory({"Pig": PigWindow, "Cat": CatWindow})
         self.setWindowTitle('Docked Window Test')
         self.setMinimumSize(QtCore.QSize(300,300))
 
-        self.addWorkspaceWindow(PigWindow())
-        self.addWorkspaceWindow(CatWindow())
+        self.loadView("Main", 
+                defaultTabs=["Pig", "Cat"])
 
 app = QtGui.QApplication([])
+app.setOrganizationName("Mohler")
+app.setOrganizationDomain("kiwistrawberry.us")
+app.setApplicationName("DockerTest")
+
 w = Main()
 w.show()
 app.exec_()

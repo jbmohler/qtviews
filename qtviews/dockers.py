@@ -39,6 +39,11 @@ class Docker(QtGui.QDockWidget):
 class TabbedWorkspaceMixin(object):
     """
     This class is designed to be a mix-in for QtGui.QMainWindow
+
+    The viewFactory is a public dictionary mapping type names to callables for
+    constructing the collection of widget.  This is used to prepare this
+    instance to reconstruct a window layout saved from a QSettings profile
+    section.
     """
     def initTabbedWorkspace(self):
         self.workspace = QtGui.QTabWidget()
@@ -50,7 +55,18 @@ class TabbedWorkspaceMixin(object):
         self.workspace.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.workspace.customContextMenuRequested.connect(self.workspaceContextMenuTabbed)
 
+        self.saveOnClose = None
+
+        self.viewFactory = {}
+
         self.docked = []
+
+    def updateViewFactory(self, mapping):
+        """
+        :param mapping:  dictionary of names to callables for instantiating
+        views identified by that name.
+        """
+        self.viewFactory.update(mapping)
 
     def viewFactory(self, klass, settingsKey=None):
         """
@@ -61,10 +77,68 @@ class TabbedWorkspaceMixin(object):
         c = klass(settingsKey)
         self.addWorkspaceWindow(c.widget(), c.title(), c.settingsKey)
 
-    def addWorkspaceWindow(self, widget, title=None, appType=None, settingsKey=None):
+    def loadView(self, name, saveOnClose=True, defaultTabs=None, defaultDocks=None, **kwargs):
+        """
+        Reload a view from a named settings profile (using QSettings).  If
+        there are no saved settings in this setting profile, then load a
+        default view as specified in the keyword arguments.
+
+        :param saveOnClose:  save the window state automatically when the
+        window is closed.
+
+        Allowable keyword arguments for setting up the defaults include:
+        :param defaultTabs:  a list of widget names in the viewFactory
+        dictionary
+        """
+        loadDefault = True
+
+        s = QtCore.QSettings()
+        s.beginGroup(name)
+        if "geometry" in s.childKeys():
+            self.restoreGeometry(s.value("geometry"))
+        if "windowState" in s.childKeys():
+            loadDefault = False
+            self.restoreState(s.value("windowState"))
+        s.endGroup()
+
+        if saveOnClose:
+            self.saveOnClose = name
+
+        if loadDefault:
+            if defaultTabs is not None:
+                for x in defaultTabs:
+                    self.addWorkspaceWindow(x)
+            if defaultDocks is not None:
+                for x in defaultDocks:
+                    self.addWorkspaceWindow(x, dock=True)
+
+    def saveView(self, name):
+        s = QtCore.QSettings()
+        s.beginGroup(name)
+        s.setValue("geometry", self.saveGeometry())
+        s.setValue("windowState", self.saveState())
+        s.endGroup()
+
+    def closeEvent(self, event):
+        if self.saveOnClose is not None:
+            self.saveView(self.saveOnClose)
+        QtGui.QMainWindow.closeEvent(self, event)
+
+    def addWorkspaceWindow(self, widget, title=None, appType=None, settingsKey=None, addto=None):
         """
         Add a dock managed window.  Tabify or dock as according to settings.
+
+        :param widget:  widget is a QtGui.QWidget derived class or a key in the
+        viewFactory dictionary.  If widget is a key in the viewFactory
+        dictionary, then the associated callable is used to construct the
+        widget.
+        :param addto: can be "dock" or "tab" to indicate adding the widget as a
+        docked window or tabbed window respectively
+
         """
+        if not isinstance(widget, QtGui.QWidget):
+            widget = self.viewFactory[widget]()
+
         if title is None and hasattr(widget, 'title'):
             title = widget.title
         if appType is None and hasattr(widget, 'appType'):
@@ -72,7 +146,10 @@ class TabbedWorkspaceMixin(object):
         if settingsKey is None and hasattr(widget, 'settingsKey'):
             settingsKey = widget.settingsKey
         widget._docker_meta = WindowMeta(title, appType, settingsKey)
-        self._addToTab(widget)
+        if addto == "dock":
+            self._addDocked(widget)
+        else:
+            self._addToTab(widget)
 
     def _addToTab(self, w):
         self.workspace.addTab(w, w._docker_meta.title)
@@ -83,12 +160,31 @@ class TabbedWorkspaceMixin(object):
     def _addDocked(self, w):
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, Docker(self, w))
 
-    def workspaceWindowByKey(self, settingsKey):
-        tabs = [tab for tab in self.tabsCollection() if
-                tab._docker_meta.settingsKey==settingsKey]
-        docks = [d for d in self.docked if d._docker_meta.settingsKey==settingsKey]
-        if len(tabs+docks):
-            return (tabs+docks)[0]
+    def windows(self, include=None):
+        """
+        Enumerate all windows managed by this TabbedWorkspaceMixin.
+
+        :param include: defaults to including both tabbed and docked windows.
+        Set to "docks" or "tabs" to limit the enumerated windows accordingly.
+        """
+        if include in [None, "tabs"]:
+            for i in range(self.workspace.count()):
+                yield self.workspace.widget(i)
+        if include in [None, "docks"]:
+            for d in self.docked:
+                yield d
+
+    def workspaceWindowByKey(self, settingsKey, include=None):
+        """
+        Search and return the first window matching the settingsKey.
+
+        :param settingsKey: the settingsKey to match
+        :param include: see :func:`windows`
+        """
+        ws = [w for w in self.windows(include) if
+                w._docker_meta.settingsKey==settingsKey]
+        if len(ws):
+            return ws[0]
         return None
 
     def dockWorkspaceWindow(self, settingsKey):
@@ -204,14 +300,10 @@ class TabbedWorkspaceMixin(object):
             action.triggered.connect(lambda checked,
                     key=child._docker_meta.settingsKey: self.selectTab(key))
 
-    def tabsCollection(self):
-        for i in range(self.workspace.count()):
-            yield self.workspace.widget(i)
-
-    def selectTab(self, key):
-        desired = [tab for tab in self.tabsCollection() if
-                tab._docker_meta.settingsKey==key]
-        if len(desired):
-            self.workspace.setCurrentWidget(desired[0])
-        return desired[0] if len(desired)>0 else None
+    def selectTab(self, settingsKey):
+        desired = self.workspaceWindowByKey(settingsKey)
+        if desired is not None:
+            self.workspace.setCurrentWidget(desired)
+            return desired
+        return None
 
