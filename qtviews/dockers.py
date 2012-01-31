@@ -8,11 +8,11 @@
 from PyQt4 import QtCore, QtGui
 
 class WindowMeta(object):
-    def __init__(self, title, appType, settingsKey=None):
+    def __init__(self, title, factory, settingsKey=None):
         self.title = title
-        self.appType = appType
+        self.factory = factory
         if settingsKey is None:
-            self.settingsKey = appType
+            self.settingsKey = factory
         else:
             self.settingsKey = settingsKey
 
@@ -30,6 +30,7 @@ class Docker(QtGui.QDockWidget):
         self.mainWindow = mainWindow
         child._docker = self
         self.setWindowTitle(child._docker_meta.title)
+        self.setObjectName(child._docker_meta.settingsKey)
         self.setWidget(child)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -83,40 +84,74 @@ class TabbedWorkspaceMixin(object):
         there are no saved settings in this setting profile, then load a
         default view as specified in the keyword arguments.
 
-        :param saveOnClose:  save the window state automatically when the
-        window is closed.
-
         Allowable keyword arguments for setting up the defaults include:
         :param defaultTabs:  a list of widget names in the viewFactory
         dictionary
-        """
-        loadDefault = True
 
+        :param defaultDocks:  a list of widget names in the viewFactory to be
+        constructed as docked windows in the QMainFrame
+
+        :param saveOnClose:  save the window state automatically when the
+        window is closed.
+
+        """
         s = QtCore.QSettings()
         s.beginGroup(name)
-        if "geometry" in s.childKeys():
-            self.restoreGeometry(s.value("geometry"))
-        if "windowState" in s.childKeys():
-            loadDefault = False
-            self.restoreState(s.value("windowState"))
-        s.endGroup()
+        if "tabbed" in s.childKeys():
+            defaultTabs = s.value("tabbed")
+            if defaultTabs in [None, '']:
+                defaultTabs = None
+            else:
+                defaultTabs = defaultTabs.split(';')
+        if "docked" in s.childKeys():
+            defaultDocks = s.value("docked")
+            if defaultDocks in [None, ""]:
+                defaultDocks = None
+            else:
+                defaultDocks = defaultDocks.split(';')
 
         if saveOnClose:
             self.saveOnClose = name
 
-        if loadDefault:
-            if defaultTabs is not None:
-                for x in defaultTabs:
-                    self.addWorkspaceWindow(x)
-            if defaultDocks is not None:
-                for x in defaultDocks:
-                    self.addWorkspaceWindow(x, dock=True)
+        if defaultTabs is not None:
+            for x in defaultTabs:
+                s.beginGroup(x)
+                factory = s.value("factory", x)
+                title = s.value("title", None)
+                self.addWorkspaceWindow(factory, title=title, settingsKey=x)
+                s.endGroup()
+        if defaultDocks is not None:
+            for x in defaultDocks:
+                s.beginGroup(x)
+                factory = s.value("factory", x)
+                title = s.value("title", None)
+                self.addWorkspaceWindow(factory, title=title, settingsKey=x, addto="dock")
+                s.endGroup()
+
+        if "geometry" in s.childKeys():
+            self.restoreGeometry(s.value("geometry"))
+        if "windowState" in s.childKeys():
+            self.restoreState(s.value("windowState"))
+        s.endGroup()
 
     def saveView(self, name):
         s = QtCore.QSettings()
         s.beginGroup(name)
         s.setValue("geometry", self.saveGeometry())
         s.setValue("windowState", self.saveState())
+
+        tabs = [w._docker_meta.settingsKey for w in self.windows("tabs")]
+        docks = [w._docker_meta.settingsKey for w in self.windows("docks")]
+
+        s.setValue("tabbed", ';'.join(tabs))
+        s.setValue("docked", ';'.join(docks))
+
+        for w in self.windows():
+            s.beginGroup(w._docker_meta.settingsKey)
+            s.setValue('title', w._docker_meta.title)
+            s.setValue('factory', w._docker_meta.factory)
+            s.endGroup()
+
         s.endGroup()
 
     def closeEvent(self, event):
@@ -124,7 +159,7 @@ class TabbedWorkspaceMixin(object):
             self.saveView(self.saveOnClose)
         QtGui.QMainWindow.closeEvent(self, event)
 
-    def addWorkspaceWindow(self, widget, title=None, appType=None, settingsKey=None, addto=None):
+    def addWorkspaceWindow(self, widget, title=None, factory=None, settingsKey=None, addto=None):
         """
         Add a dock managed window.  Tabify or dock as according to settings.
 
@@ -137,15 +172,17 @@ class TabbedWorkspaceMixin(object):
 
         """
         if not isinstance(widget, QtGui.QWidget):
+            assert factory == widget or factory == None, 'This is a bizarre API with a silly limitation'
+            factory = widget
             widget = self.viewFactory[widget]()
 
         if title is None and hasattr(widget, 'title'):
             title = widget.title
-        if appType is None and hasattr(widget, 'appType'):
-            appType = widget.appType
+        if factory is None and hasattr(widget, 'factory'):
+            factory = widget.factory
         if settingsKey is None and hasattr(widget, 'settingsKey'):
             settingsKey = widget.settingsKey
-        widget._docker_meta = WindowMeta(title, appType, settingsKey)
+        widget._docker_meta = WindowMeta(title, factory, settingsKey)
         if addto == "dock":
             self._addDocked(widget)
         else:
@@ -158,6 +195,7 @@ class TabbedWorkspaceMixin(object):
         w.setFocus()
 
     def _addDocked(self, w):
+        self.docked.append(w)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, Docker(self, w))
 
     def windows(self, include=None):
@@ -193,7 +231,6 @@ class TabbedWorkspaceMixin(object):
         """
         w = self.workspaceWindowByKey(settingsKey)
         if w is not None:
-            self.docked.append(w)
             self._addDocked(w)
 
     def undockWorkspaceWindow(self, settingsKey):
@@ -236,7 +273,7 @@ class TabbedWorkspaceMixin(object):
 
     def workspaceContextMenuTabbed(self, pnt):
         tb = self.workspace.tabBar()
-        if self.workspace.currentIndex() > 0 and tb.tabAt(pnt) == self.workspace.currentIndex():
+        if self.workspace.currentIndex() >= 0 and tb.tabAt(pnt) == self.workspace.currentIndex():
             self.menu = QtGui.QMenu()
 
             w = self.workspace.currentWidget()
