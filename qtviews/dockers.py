@@ -159,6 +159,11 @@ class TabbedWorkspaceMixin(object):
             self.saveView(self.saveOnClose)
         QtGui.QMainWindow.closeEvent(self, event)
 
+    def addWorkspaceWindowOrSelect(self, widget, title=None, factory=None, settingsKey=None, addto=None):
+        w = self.selectTab(widget)
+        if w is None:
+            self.addWorkspaceWindow(widget, title, factory, settingsKey, addto)
+
     def addWorkspaceWindow(self, widget, title=None, factory=None, settingsKey=None, addto=None):
         """
         Add a dock managed window.  Tabify or dock as according to settings.
