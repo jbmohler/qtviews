@@ -4,9 +4,7 @@ import glob
 
 files = """
 setup.py
-lib/*.py
-
-scripts/pyhacc
+qtviews/*.py
 """
 
 files = [f.strip() for f in files.split('\n') if f.strip() != ""]
