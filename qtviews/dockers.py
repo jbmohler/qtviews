@@ -140,17 +140,20 @@ class TabbedWorkspaceMixin(object):
         s.setValue("geometry", self.saveGeometry())
         s.setValue("windowState", self.saveState())
 
-        tabs = [w._docker_meta.settingsKey for w in self.windows("tabs")]
-        docks = [w._docker_meta.settingsKey for w in self.windows("docks")]
+        tabs = [w._docker_meta.settingsKey for w in self.windows("tabs") 
+                if w._docker_meta.factory is not None]
+        docks = [w._docker_meta.settingsKey for w in self.windows("docks") 
+                if w._docker_meta.factory is not None]
 
-        s.setValue("tabbed", ';'.join(tabs))
-        s.setValue("docked", ';'.join(docks))
+        s.setValue("tabbed", ';'.join([t for t in tabs if t is not None]))
+        s.setValue("docked", ';'.join([t for t in docks if t is not None]))
 
         for w in self.windows():
-            s.beginGroup(w._docker_meta.settingsKey)
-            s.setValue('title', w._docker_meta.title)
-            s.setValue('factory', w._docker_meta.factory)
-            s.endGroup()
+            if w._docker_meta.factory is not None:
+                s.beginGroup(w._docker_meta.settingsKey)
+                s.setValue('title', w._docker_meta.title)
+                s.setValue('factory', w._docker_meta.factory)
+                s.endGroup()
 
         s.endGroup()
 
@@ -332,9 +335,9 @@ class TabbedWorkspaceMixin(object):
         for i in range(self.workspace.count()):
             child = self.workspace.widget(i)
             if i < 9:
-                text = self.tr("&{0} {1}".format(i+1, child.windowTitle()))
+                text = self.tr("&{0} {1}".format(i+1, child._docker_meta.title))
             else:
-                text = self.tr("&{1}".format(child.windowTitle()))
+                text = self.tr("&{1}".format(child._docker_meta.title))
 
             action = self.windowMenu.addAction(text)
             action.setCheckable(True)
