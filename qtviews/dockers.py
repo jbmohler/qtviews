@@ -135,6 +135,11 @@ class TabbedWorkspaceMixin(object):
         s.endGroup()
 
     def saveView(self, name):
+        """
+        This method saves the dock and tabs settings for restoration in the
+        future.  Note that this can be hooked up in the closeEvent method
+        automatically if saveOnClose is True in :func:`loadView`.
+        """
         s = QtCore.QSettings()
         s.beginGroup(name)
         s.setValue("geometry", self.saveGeometry())

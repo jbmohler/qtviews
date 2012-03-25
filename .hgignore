@@ -4,3 +4,4 @@ build
 dist
 QtViews.egg*
 *~
+*.pyc
