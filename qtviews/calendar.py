@@ -130,11 +130,12 @@ class CalendarView(TableView):
     ...     text = lambda x: x["text"],
     ...     bkColor = lambda x: QtGui.QColor(0, 0, 0))
     """
-    doubleClickSchedule = Signal(object)
-    contextMenuSchedule = Signal(QtCore.QPoint, object)
+    doubleClickCalendarEvent = Signal(object)
+    contextMenuCalendarEvent = Signal(QtCore.QPoint, object)
 
     def __init__(self, parent=None):
         TableView.__init__(self, parent)
+        self.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.setItemDelegate(CalendarDelegate(self))
         self.verticalHeader().setDefaultSectionSize(80)
         self.firstDate = None
@@ -174,7 +175,7 @@ class CalendarView(TableView):
             for entry in index.internalPointer().entryList(index):
                 eventRect = index.internalPointer().entryBlock(entry, index, self.visualRect(index))
                 if eventRect.contains(event.pos()):
-                    self.doubleClickSchedule.emit(entry.obj)
+                    self.doubleClickCalendarEvent.emit(entry.obj)
                     event.accept()
                     break
         TableView.mouseDoubleClickEvent(self, event)
@@ -185,7 +186,7 @@ class CalendarView(TableView):
             for entry in index.internalPointer().entryList(index):
                 eventRect = index.internalPointer().entryBlock(entry, index, self.visualRect(index))
                 if eventRect.contains(event.pos()):
-                    self.contextMenuSchedule.emit(event.pos(), entry.obj)
+                    self.contextMenuCalendarEvent.emit(event.pos(), entry.obj)
                     event.accept()
                     break
         TableView.contextMenuEvent(self, event)
