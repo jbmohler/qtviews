@@ -12,6 +12,7 @@ import datetime
 
 day_names = "Sunday Monday Tuesday Wednesday Thursday Friday Saturday".split(' ')
 
+event_height = 20
 
 class EventWrapper(object):
     """
@@ -53,7 +54,7 @@ class CalendarRow(object):
     def entryBlock(self, entry, index, indexRect):
         this_day = self.date(index)
         r = indexRect
-        r.setHeight(18)
+        r.setHeight(event_height - 2)
         if entry.start_date == this_day and entry.end_date == this_day:
             end_deflate = lambda x: x.adjusted(3, 0, -3, 0)
         elif entry.start_date == this_day:
@@ -62,7 +63,7 @@ class CalendarRow(object):
             end_deflate = lambda x: x.adjusted(-3, 0, -3, 0)
         else:
             end_deflate = lambda x: x
-        return end_deflate(r.translated(0, 20*(entry.visual_row_level+1)))
+        return end_deflate(r.translated(0, event_height*(entry.visual_row_level+1)))
 
     def date(self, index):
         """
@@ -95,9 +96,20 @@ class CalendarDelegate(QtGui.QStyledItemDelegate):
 
         deflated = lambda x: x.adjusted(2, 1, -2, -1)
         r = options.rect.translated(-options.rect.topLeft())
-        r.setHeight(18)
-        painter.drawText(deflated(r), 0, this_day.strftime("%b %d"))
-        for entry in index.internalPointer().entryList(index):
+        r.setHeight(event_height - 2)
+        painter.drawText(deflated(r), 0, "{0} {1}".format(this_day.strftime("%B"), this_day.day))
+
+        visible_count = (options.rect.height() // event_height) - 1
+        entries = index.internalPointer().entryList(index)
+
+        if len(entries) > visible_count:
+            r = options.rect.translated(-options.rect.topLeft())
+            r = r.translated(QtCore.QPoint(r.width() - 35, 0))
+            r.setHeight(event_height - 2)
+            painter.setPen(QtGui.QPen(QtGui.QColor("red")))
+            painter.drawText(deflated(r), 0, "more")
+
+        for entry in entries[:visible_count]:
             entry_back_color = entry.bkcolor
             entry_front_color = GetContrastingTextColor(entry_back_color)
 
@@ -113,10 +125,13 @@ class CalendarDelegate(QtGui.QStyledItemDelegate):
 
         painter.restore()
 
+    def sizeHint(self, option, index):
+        entries = index.internalPointer().entryList(index)
+        return QtCore.QSize(80, (len(entries)+1)*event_height+1)
 
 class CalendarView(TableView):
     """
-
+    Clickable calendar view.
 
     >>> app = initQtapp()
     >>> c = CalendarView()
@@ -137,13 +152,13 @@ class CalendarView(TableView):
         TableView.__init__(self, parent)
         self.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.setItemDelegate(CalendarDelegate(self))
-        self.verticalHeader().setDefaultSectionSize(80)
         self.firstDate = None
         self.numWeeks = None
 
-    def setDateRange(self, firstDate, numWeeks):
+    def setDateRange(self, firstDate, numWeeks, dayHeight=3):
         self.firstDate = firstDate
         self.numWeeks = numWeeks
+        self.verticalHeader().setDefaultSectionSize(event_height*(dayHeight+1)+1)
 
     def setEventList(self, events, startDate, endDate, text, bkColor):
         events = [EventWrapper(e, startDate(e), endDate(e), text(e), bkColor(e)) 
