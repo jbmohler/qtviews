@@ -2,7 +2,7 @@
 ##############################################################################
 #       Copyright (C) 2010, Joel B. Mohler <joel@kiwistrawberry.us>
 #
-#  Distributed under the terms of the GNU General Public License (GPL)
+#  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #                  http://www.gnu.org/licenses/
 ##############################################################################
 
@@ -103,11 +103,11 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(name='QtViews',
-    version='0.1', # also update in qtviews/__init__.py
+    version='0.2.0', # also update in qtviews/__init__.py
     description='QtViews Library for Qt Helpers',
     author='Joel B. Mohler',
     author_email='joel@kiwistrawberry.us',
-    license='GPLv2+',
+    license='LGPLv2+',
     long_description=read('README.txt'),
     url='https://bitbucket.org/jbmohler/qtviews/',
     cmdclass=cmds,
@@ -118,8 +118,7 @@ setup(name='QtViews',
     classifiers = [
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers", 
-        #"Topic :: Office/Business :: Financial :: Accounting", 
-        "License :: OSI Approved :: GNU General Public License (GPL)",
+        "License :: OSI Approved :: GNU Lesser General Public License v2 (LGPLv2)",
         "Programming Language :: Python :: 2",
         "Operating System :: OS Independent", 
         "Environment :: Win32 (MS Windows)", 
