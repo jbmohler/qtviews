@@ -7,7 +7,7 @@
 
 from qtalchemy import PBTableModel, ModelColumn, Signal, Slot
 from qtalchemy.widgets import TableView
-from PyQt4 import QtCore, QtGui
+from PySide import QtCore, QtGui
 import datetime
 
 day_names = "Sunday Monday Tuesday Wednesday Thursday Friday Saturday".split(' ')

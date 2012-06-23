@@ -5,7 +5,7 @@
 #                  http://www.gnu.org/licenses/
 ##############################################################################
 
-qt_bindings = 'PyQt4'
+qt_bindings = 'PySide'
 if qt_bindings == 'PyQt4':
     # we wish to only touch sip if we're PyQt4 based (otherwise sip is unnecessary)
     import sip

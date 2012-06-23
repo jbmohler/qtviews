@@ -5,7 +5,7 @@
 #                  http://www.gnu.org/licenses/
 ##############################################################################
 
-from PyQt4 import QtCore, QtGui
+from PySide import QtCore, QtGui
 
 class WindowMeta(object):
     def __init__(self, title, factory, settingsKey=None):
