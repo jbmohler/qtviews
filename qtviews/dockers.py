@@ -262,23 +262,23 @@ class TabbedWorkspaceMixin(object):
     def addSharedContextActions(self, w, menu):
         # rename, close, detach from command
         a = menu.addAction("Close")
-        a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+        a.triggered.connect(lambda key=w._docker_meta.settingsKey:
                 self.closeWindow(w._docker_meta.settingsKey))
 
         a = menu.addAction("Rename")
-        a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+        a.triggered.connect(lambda key=w._docker_meta.settingsKey:
                 self.renameWindow(key))
 
         if not w._docker_meta.is_detached():
             a = menu.addAction("Detach Visual Settings")
-            a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+            a.triggered.connect(lambda key=w._docker_meta.settingsKey:
                     self.detachVisualSettings(key))
 
     def workspaceContextMenuDocked(self, w, pnt):
         self.menu = QtGui.QMenu()
 
         a = self.menu.addAction("Tabify")
-        a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+        a.triggered.connect(lambda key=w._docker_meta.settingsKey:
                 self.undockWorkspaceWindow(key))
 
         self.addSharedContextActions(w, self.menu)
@@ -292,7 +292,7 @@ class TabbedWorkspaceMixin(object):
 
             w = self.workspace.currentWidget()
             a = self.menu.addAction("Add docked")
-            a.triggered.connect(lambda check, key=w._docker_meta.settingsKey:
+            a.triggered.connect(lambda key=w._docker_meta.settingsKey:
                     self.dockWorkspaceWindow(key))
 
             self.addSharedContextActions(w, self.menu)
