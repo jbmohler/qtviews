@@ -35,6 +35,7 @@ class EventWrapper(object):
         self.end_date = end_date
         self.text = text
         self.bkcolor = bkcolor
+        self.visual_row_level = None
 
 
 class CalendarRow(object):
@@ -148,9 +149,10 @@ class CalendarView(TableView):
     """
     doubleClickCalendarEvent = Signal(object)
     contextMenuCalendarEvent = Signal(QtCore.QPoint, object)
+    eventSelectionChanged = Signal()
 
     def __init__(self, parent=None):
-        TableView.__init__(self, parent)
+        super(CalendarView, self).__init__(parent)
         self.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.setItemDelegate(CalendarDelegate(self))
         self.firstDate = None
@@ -173,17 +175,38 @@ class CalendarView(TableView):
             calWeek = []
             for i in range(7):
                 d = day0 + datetime.timedelta(i)
-                calWeek.append([e for e in events if e.start_date <= d and e.end_date >= d])
-                zz = 0
-                for x in calWeek[-1]:
-                    x.visual_row_level = zz
-                    zz += 1
+                this_day_list = [e for e in events if e.start_date <= d and e.end_date >= d]
+                calWeek.append(this_day_list)
+
+                zz = range(len(this_day_list))
+                for e in this_day_list:
+                    if e.visual_row_level in zz:
+                        zz.remove(e.visual_row_level)
+                for e in this_day_list:
+                    if e.visual_row_level is None:
+                        e.visual_row_level = zz[0]
+                        del zz[0]
 
             rows.append(CalendarRow(day0, calWeek))
 
         self.rows = PBTableModel(columns=[ModelColumn("day{0}".format(d),str,day_names[d]) for d in range(7)])
         self.setModel(self.rows)
         self.rows.reset_content_from_list(rows)
+        self.selectionModel().selectionChanged.connect(self.selectionChanged)
+
+    def selectionChanged(self, selected, deselected):
+        self.eventSelectionChanged.emit()
+
+    def selectedDates(self):
+        m = self.selectionModel()
+        if m is None:
+            return []
+        return [x.internalPointer().date(x) for x in m.selectedIndexes()]
+
+    def selectDate(self, d, selMode=QtGui.QItemSelectionModel.Select):
+        m = self.selectionModel()
+        index = QtCore.QModelIndex() # TODO:  write this code
+        m.select(index, selMode)
 
     def mouseDoubleClickEvent(self, event):
         index = self.indexAt(event.pos())
@@ -194,7 +217,7 @@ class CalendarView(TableView):
                     self.doubleClickCalendarEvent.emit(entry.obj)
                     event.accept()
                     break
-        TableView.mouseDoubleClickEvent(self, event)
+        super(CalendarView, self).mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event):
         index = self.indexAt(event.pos())
@@ -205,5 +228,5 @@ class CalendarView(TableView):
                     self.contextMenuCalendarEvent.emit(event.pos(), entry.obj)
                     event.accept()
                     break
-        TableView.contextMenuEvent(self, event)
+        super(CalendarView, self).contextMenuEvent(event)
 
