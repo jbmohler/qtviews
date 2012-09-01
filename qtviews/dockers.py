@@ -40,7 +40,8 @@ class Docker(QtGui.QDockWidget):
 
 class TabbedWorkspaceMixin(object):
     """
-    This class is designed to be a mix-in for QtGui.QMainWindow
+    This class is designed to be a mix-in for QtGui.QMainWindow.  It places a
+    QTabWidget as the central widget.
 
     The viewFactory is a public dictionary mapping type names to callables for
     constructing the collection of widget.  This is used to prepare this
@@ -56,8 +57,6 @@ class TabbedWorkspaceMixin(object):
 
         self.workspace.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.workspace.customContextMenuRequested.connect(self.workspaceContextMenuTabbed)
-
-        self.saveOnClose = None
 
         self.viewFactory = {}
 
@@ -79,22 +78,18 @@ class TabbedWorkspaceMixin(object):
         c = klass(settingsKey)
         self.addWorkspaceWindow(c.widget(), c.title(), c.settingsKey)
 
-    def loadView(self, name, saveOnClose=True, defaultTabs=None, defaultDocks=None, **kwargs):
+    def loadView(self, name, defaultTabs=None, defaultDocks=None, **kwargs):
         """
         Reload a view from a named settings profile (using QSettings).  If
         there are no saved settings in this setting profile, then load a
         default view as specified in the keyword arguments.
 
         Allowable keyword arguments for setting up the defaults include:
+
         :param defaultTabs:  a list of widget names in the viewFactory
-        dictionary
-
+            dictionary
         :param defaultDocks:  a list of widget names in the viewFactory to be
-        constructed as docked windows in the QMainFrame
-
-        :param saveOnClose:  save the window state automatically when the
-        window is closed.
-
+            constructed as docked windows in the QMainFrame
         """
         s = QtCore.QSettings()
         s.beginGroup(name)
@@ -110,9 +105,6 @@ class TabbedWorkspaceMixin(object):
                 defaultDocks = None
             else:
                 defaultDocks = defaultDocks.split(';')
-
-        if saveOnClose:
-            self.saveOnClose = name
 
         if defaultTabs is not None:
             for x in defaultTabs:
@@ -138,8 +130,7 @@ class TabbedWorkspaceMixin(object):
     def saveView(self, name):
         """
         This method saves the dock and tabs settings for restoration in the
-        future.  Note that this can be hooked up in the closeEvent method
-        automatically if saveOnClose is True in :func:`loadView`.
+        future.
         """
         s = QtCore.QSettings()
         s.beginGroup(name)
@@ -162,11 +153,6 @@ class TabbedWorkspaceMixin(object):
                 s.endGroup()
 
         s.endGroup()
-
-    def closeEvent(self, event):
-        if self.saveOnClose is not None:
-            self.saveView(self.saveOnClose)
-        QtGui.QMainWindow.closeEvent(self, event)
 
     def addWorkspaceWindowOrSelect(self, widget, title=None, factory=None, settingsKey=None, addto=None):
         w = self.selectTab(widget)
