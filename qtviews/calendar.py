@@ -189,10 +189,11 @@ class CalendarView(TableView):
 
             rows.append(CalendarRow(day0, calWeek))
 
-        self.rows = PBTableModel(columns=[ModelColumn("day{0}".format(d),str,day_names[d]) for d in range(7)])
-        self.setModel(self.rows)
-        self.rows.reset_content_from_list(rows)
-        self.selectionModel().selectionChanged.connect(self.selectionChanged)
+        self.internal_model = PBTableModel(columns=[ModelColumn("day{0}".format(d),str,day_names[d]) for d in range(7)])
+        self.setModel(self.internal_model)
+        self.internal_model.reset_content_from_list(rows)
+        self.selModel = self.selectionModel()
+        self.selModel.selectionChanged.connect(self.selectionChanged)
 
     def selectionChanged(self, selected, deselected):
         self.eventSelectionChanged.emit()
