@@ -164,11 +164,11 @@ class TabbedWorkspaceMixin(object):
         Add a dock managed window.  Tabify or dock as according to settings.
 
         :param widget:  widget is a QtGui.QWidget derived class or a key in the
-        viewFactory dictionary.  If widget is a key in the viewFactory
-        dictionary, then the associated callable is used to construct the
-        widget.
+            viewFactory dictionary.  If widget is a key in the viewFactory
+            dictionary, then the associated callable is used to construct the
+            widget.
         :param addto: can be "dock" or "tab" to indicate adding the widget as a
-        docked window or tabbed window respectively
+            docked window or tabbed window respectively
 
         """
         if not isinstance(widget, QtGui.QWidget):
@@ -340,7 +340,10 @@ class TabbedWorkspaceMixin(object):
     def selectTab(self, settingsKey):
         desired = self.workspaceWindowByKey(settingsKey)
         if desired is not None:
-            self.workspace.setCurrentWidget(desired)
+            if hasattr(desired, '_docker'):
+                desired._docker.show()
+            else:
+                self.workspace.setCurrentWidget(desired)
             return desired
         return None
 
