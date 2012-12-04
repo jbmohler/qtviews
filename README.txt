@@ -12,6 +12,7 @@ The second component is a calendar view.
 Changelog
 ---------
 
+* 0.2.1:  incremental bug fixes (mainly PySide related)
 * 0.2.0:  Fix bugs & switch to LGPL license
 * 0.1.x:  Make the calendar view
 * 0.0.x:  Make the TabbedWorkspaceMixin

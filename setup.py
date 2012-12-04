@@ -112,7 +112,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(name='QtViews',
-    version='0.2.0', # also update in qtviews/__init__.py
+    version='0.2.1', # also update in qtviews/__init__.py
     description='QtViews Library for Qt Helpers',
     author='Joel B. Mohler',
     author_email='joel@kiwistrawberry.us',
