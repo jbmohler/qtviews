@@ -14,6 +14,7 @@ except ImportError:
     from setuptools import setup
 
 import os
+import sys
 import dircache
 import distutils
 from distutils.core import Command
@@ -24,13 +25,21 @@ def needsupdate(src, targ):
 
 class PySideUiBuild:
     def qrc(self, qrc_file, py_file):
+        qrc_compiler = 'pyside-rcc'
+        if sys.platform.lower().startswith('win'):
+            import PySide
+            qrc_compiler = os.path.join(PySide.__path__[0], 'pyside-rcc')
         import subprocess
-        rccprocess = subprocess.Popen(['pyside-rcc', qrc_file, '-py2', '-o', py_file])
+        rccprocess = subprocess.Popen([qrc_compiler, qrc_file, '-py2', '-o', py_file])
         rccprocess.wait()
 
     def uic(self, ui_file, py_file):
+        uic_compiler = 'pyside-uic'
+        if sys.platform.lower().startswith('win'):
+            import PySide
+            uic_compiler = os.path.join(PySide.__path__[0], 'pyside-uic')
         import subprocess
-        rccprocess = subprocess.Popen(['pyside-uic', ui_file, '-o', py_file])
+        rccprocess = subprocess.Popen([uic_compiler, ui_file, '-o', py_file])
         rccprocess.wait()
 
 class PyQt4UiBuild:
