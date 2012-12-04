@@ -16,5 +16,5 @@ if qt_bindings == 'PyQt4':
 from dockers import *
 from calendar import CalendarView
 
-__version_info__ = ['0', '2', '1']
+__version_info__ = ['0', '2', '2-pre']
 __version__ = '.'.join(__version_info__)
