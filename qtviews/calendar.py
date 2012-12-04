@@ -9,6 +9,7 @@
 from qtalchemy import PBTableModel, ModelColumn, Signal, Slot
 from qtalchemy.widgets import TableView
 from PySide import QtCore, QtGui
+from .utils import *
 import datetime
 
 day_names = "Sunday Monday Tuesday Wednesday Thursday Friday Saturday".split(' ')
@@ -135,7 +136,7 @@ class CalendarView(TableView):
     """
     Clickable calendar view.
 
-    >>> app = initQtapp()
+    >>> app = qtapp()
     >>> c = CalendarView()
     >>> c.setDateRange(datetime.date(2012, 3, 18), 6)
     >>> c.setEventList([
@@ -167,7 +168,7 @@ class CalendarView(TableView):
         events = [EventWrapper(e, startDate(e), endDate(e), text(e), bkColor(e)) 
                         for e in events]
 
-        rows = []
+        datarows = []
         for i in range(self.numWeeks):
             day0 = self.firstDate + datetime.timedelta(i*7)
             day6 = self.firstDate + datetime.timedelta(i*7+6)
@@ -187,11 +188,11 @@ class CalendarView(TableView):
                         e.visual_row_level = zz[0]
                         del zz[0]
 
-            rows.append(CalendarRow(day0, calWeek))
+            datarows.append(CalendarRow(day0, calWeek))
 
-        self.internal_model = PBTableModel(columns=[ModelColumn("day{0}".format(d),str,day_names[d]) for d in range(7)])
-        self.setModel(self.internal_model)
-        self.internal_model.reset_content_from_list(rows)
+        self.rows = PBTableModel(columns=[ModelColumn("day{0}".format(d),str,day_names[d]) for d in range(7)])
+        self.setModel(self.rows)
+        self.rows.reset_content_from_list(datarows)
         self.selModel = self.selectionModel()
         self.selModel.selectionChanged.connect(self.selectionChanged)
 
