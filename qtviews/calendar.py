@@ -7,9 +7,11 @@
 ##############################################################################
 
 from qtalchemy import PBTableModel, ModelColumn, Signal, Slot
+from qtalchemy import LayoutLayout, LayoutWidget
 from qtalchemy.widgets import TableView
 from PySide import QtCore, QtGui
 from .utils import *
+import fuzzyparsers
 import datetime
 
 day_names = "Sunday Monday Tuesday Wednesday Thursday Friday Saturday".split(' ')
@@ -232,3 +234,42 @@ class CalendarView(TableView):
                     break
         super(CalendarView, self).contextMenuEvent(event)
 
+class CalendarTopNav(QtGui.QWidget):
+    """
+    >>> app = qtapp()
+    >>> c = CalendarTopNav()
+    """
+    relativeMove = Signal(int)
+    absoluteMove = Signal(object)
+
+    def __init__(self, parent=None):
+        super(CalendarTopNav, self).__init__(parent)
+
+        main = QtGui.QHBoxLayout(self)
+        self.earlier = [
+            LayoutWidget(main, QtGui.QPushButton("<<<")),
+            LayoutWidget(main, QtGui.QPushButton("<<")),
+            LayoutWidget(main, QtGui.QPushButton("<"))]
+        self.earlier.reverse()
+        self.month_label = LayoutWidget(main, QtGui.QLabel("&Month:"))
+        self.month = LayoutWidget(main, QtGui.QLineEdit())
+        self.later = [
+            LayoutWidget(main, QtGui.QPushButton(">")),
+            LayoutWidget(main, QtGui.QPushButton(">>")),
+            LayoutWidget(main, QtGui.QPushButton(">>>"))]
+        for b in self.earlier + self.later:
+            b.setMaximumWidth(40)
+        self.month_label.setBuddy(self.month)
+        self.month.returnPressed.connect(self.input_reset)
+        self.setFocusProxy(self.month)
+
+        for i in range(3):
+            self.earlier[i].clicked.connect(lambda index=-i-1:self.relativeMove.emit(index))
+            self.later[i].clicked.connect(lambda index=+i+1:self.relativeMove.emit(index))
+
+    def input_reset(self):
+        try:
+            x = fuzzyparsers.parse_date(self.month.text())
+            self.absoluteMove.emit(x)
+        except Exception, e:
+            pass

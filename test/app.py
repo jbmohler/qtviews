@@ -1,7 +1,7 @@
 
 
 from qtviews import *
-from PyQt4 import QtCore, QtGui
+from PySide import QtCore, QtGui
 
 class CatWindow(QtGui.QWidget):
     title = 'Cat Window'
@@ -36,11 +36,13 @@ class Main(QtGui.QMainWindow, TabbedWorkspaceMixin):
         self.loadView("Main", 
                 defaultTabs=["Pig", "Cat"])
 
-app = QtGui.QApplication([])
-app.setOrganizationName("Mohler")
-app.setOrganizationDomain("kiwistrawberry.us")
-app.setApplicationName("DockerTest")
 
-w = Main()
-w.show()
-app.exec_()
+if __name__ == '__main__':
+    app = QtGui.QApplication([])
+    app.setOrganizationName("Mohler")
+    app.setOrganizationDomain("kiwistrawberry.us")
+    app.setApplicationName("DockerTest")
+
+    w = Main()
+    w.show()
+    app.exec_()

@@ -14,7 +14,7 @@ if qt_bindings == 'PyQt4':
     sip.setapi('QVariant', 2)
 
 from dockers import *
-from calendar import CalendarView
+from calendar import CalendarView, CalendarTopNav
 
 __version_info__ = ['0', '2', '2-pre']
 __version__ = '.'.join(__version_info__)
