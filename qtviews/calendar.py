@@ -246,6 +246,7 @@ class CalendarTopNav(QtGui.QWidget):
         super(CalendarTopNav, self).__init__(parent)
 
         main = QtGui.QHBoxLayout(self)
+        main.setContentsMargins(0, 0, 0, 0)
         self.earlier = [
             LayoutWidget(main, QtGui.QPushButton("<<<")),
             LayoutWidget(main, QtGui.QPushButton("<<")),
@@ -262,6 +263,7 @@ class CalendarTopNav(QtGui.QWidget):
         self.month_label.setBuddy(self.month)
         self.month.returnPressed.connect(self.input_reset)
         self.setFocusProxy(self.month)
+        self.setMaximumHeight(self.month.sizeHint().height())
 
         for i in range(3):
             self.earlier[i].clicked.connect(lambda index=-i-1:self.relativeMove.emit(index))
