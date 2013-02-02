@@ -212,26 +212,27 @@ class CalendarView(TableView):
         index = QtCore.QModelIndex() # TODO:  write this code
         m.select(index, selMode)
 
-    def mouseDoubleClickEvent(self, event):
-        index = self.indexAt(event.pos())
+    def itemAt(self, pos):
+        index = self.indexAt(pos)
         if index is not None and index.isValid():
             for entry in index.internalPointer().entryList(index):
                 eventRect = index.internalPointer().entryBlock(entry, index, self.visualRect(index))
-                if eventRect.contains(event.pos()):
-                    self.doubleClickCalendarEvent.emit(entry.obj)
-                    event.accept()
-                    break
+                if eventRect.contains(pos):
+                    return entry.obj
+        return None
+
+    def mouseDoubleClickEvent(self, event):
+        obj = self.itemAt(event.pos())
+        if obj is not None:
+            self.doubleClickCalendarEvent.emit(obj)
+            event.accept()
         super(CalendarView, self).mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event):
-        index = self.indexAt(event.pos())
-        if index is not None and index.isValid():
-            for entry in index.internalPointer().entryList(index):
-                eventRect = index.internalPointer().entryBlock(entry, index, self.visualRect(index))
-                if eventRect.contains(event.pos()):
-                    self.contextMenuCalendarEvent.emit(event.pos(), entry.obj)
-                    event.accept()
-                    break
+        obj = self.itemAt(event.pos())
+        if obj is not None:
+            self.contextMenuCalendarEvent.emit(event.pos(), obj)
+            event.accept()
         super(CalendarView, self).contextMenuEvent(event)
 
 class CalendarTopNav(QtGui.QWidget):
