@@ -15,29 +15,26 @@ except ImportError:
 
 import os
 import sys
-import dircache
 import distutils
 from distutils.core import Command
 from distutils.command.build import build
+
+PY3 = sys.version > '3'
 
 def needsupdate(src, targ):
     return not os.path.exists(targ) or os.path.getmtime(src) > os.path.getmtime(targ)
 
 class PySideUiBuild:
     def qrc(self, qrc_file, py_file):
-        qrc_compiler = 'pyside-rcc'
-        if sys.platform.lower().startswith('win'):
-            import PySide
-            qrc_compiler = os.path.join(PySide.__path__[0], 'pyside-rcc')
+        import PySide
+        qrc_compiler = os.path.join(PySide.__path__[0], 'pyside-rcc')
         import subprocess
-        rccprocess = subprocess.Popen([qrc_compiler, qrc_file, '-py2', '-o', py_file])
+        rccprocess = subprocess.Popen([qrc_compiler, qrc_file, '-py3' if PY3 else '-py2', '-o', py_file])
         rccprocess.wait()
 
     def uic(self, ui_file, py_file):
-        uic_compiler = 'pyside-uic'
-        if sys.platform.lower().startswith('win'):
-            import PySide
-            uic_compiler = os.path.join(PySide.__path__[0], 'pyside-uic')
+        import PySide
+        uic_compiler = os.path.join(PySide.__path__[0], 'pyside-uic')
         import subprocess
         rccprocess = subprocess.Popen([uic_compiler, ui_file, '-o', py_file])
         rccprocess.wait()
@@ -45,7 +42,7 @@ class PySideUiBuild:
 class PyQt4UiBuild:
     def qrc(self, qrc_file, py_file):
         import subprocess
-        rccprocess = subprocess.Popen(['pyrcc4', qrc_file, '-py2', '-o', py_file])
+        rccprocess = subprocess.Popen(['pyrcc4', qrc_file, '-py3' if PY3 else '-py2', '-o', py_file])
         rccprocess.wait()
 
     def uic(self, ui_file, py_file):
@@ -73,8 +70,8 @@ class QtUiBuild(Command, PySideUiBuild):
         print("compiling %s -> %s" % (ui_file, py_file))
         try:
             self.uic(ui_file, py_file)
-        except Exception, e:
-            raise distutils.errors.DistutilsExecError, 'Unable to compile user interface %s' % str(e)
+        except Exception as e:
+            raise distutils.errors.DistutilsExecError('Unable to compile user interface %s' % str(e))
             return
     
     def compile_qrc(self, qrc_file, py_file):
@@ -83,8 +80,8 @@ class QtUiBuild(Command, PySideUiBuild):
         print("compiling %s -> %s" % (qrc_file, py_file))
         try:
             self.qrc(qrc_file, py_file)
-        except Exception, e:
-            raise distutils.errors.DistutilsExecError, 'Unable to compile resource file %s' % str(e)
+        except Exception as e:
+            raise distutils.errors.DistutilsExecError('Unable to compile resource file %s' % str(e))
             return
 
     def run(self):
@@ -98,7 +95,7 @@ class QtUiBuild(Command, PySideUiBuild):
 QtUiBuild.ui_files = []
 QtUiBuild.qrc_files = [os.path.join(dir, f) \
                 for dir in [] \
-                for f in dircache.listdir(dir) if f.endswith('.qrc')]
+                for f in os.listdir(dir) if f.endswith('.qrc')]
 
 class QtViewsBuild(build):
     sub_commands = [('build_ui', None)] + build.sub_commands
@@ -128,6 +125,7 @@ setup(name='QtViews',
         "Intended Audience :: Developers", 
         "License :: OSI Approved :: GNU Lesser General Public License v2 (LGPLv2)",
         "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 3",
         "Operating System :: OS Independent", 
         "Environment :: Win32 (MS Windows)", 
         "Environment :: X11 Applications :: Qt"])

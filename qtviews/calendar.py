@@ -181,7 +181,7 @@ class CalendarView(TableView):
                 this_day_list = [e for e in events if e.start_date <= d and e.end_date >= d]
                 calWeek.append(this_day_list)
 
-                zz = range(len(this_day_list))
+                zz = list(range(len(this_day_list)))
                 for e in this_day_list:
                     if e.visual_row_level in zz:
                         zz.remove(e.visual_row_level)
@@ -274,5 +274,5 @@ class CalendarTopNav(QtGui.QWidget):
         try:
             x = fuzzyparsers.parse_date(self.month.text())
             self.absoluteMove.emit(x)
-        except Exception, e:
+        except Exception as e:
             pass
