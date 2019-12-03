@@ -6,10 +6,9 @@
 #                  http://www.gnu.org/licenses/
 ##############################################################################
 
-from qtalchemy import PBTableModel, ModelColumn, Signal, Slot
-from qtalchemy import LayoutLayout, LayoutWidget
-from qtalchemy.widgets import TableView
-from PySide import QtCore, QtGui
+from apputils import ObjectQtModel, Column
+from apputils.widgets import TableView
+from PySide2 import QtCore, QtGui, QtWidgets
 from .utils import *
 import fuzzyparsers
 import datetime
@@ -77,19 +76,23 @@ class CalendarRow(object):
         return self.day0_date + datetime.timedelta(index.column())
 
 
-def GetContrastingTextColor(c):
-    return QtGui.QColor("lightGray") if (max([c.red(), c.green(), c.blue()]) >=
-            128) else QtGui.QColor("black")
+def rgb_contrasting_foreground(c):
+    # see https://stackoverflow.com/questions/3116260/given-a-background-color-how-to-get-a-foreground-color-that-makes-it-readable-o 
+    consts = [0.2126, 0.7152, 0.0721]
+    comps = [c.red(), c.green(), c.blue()]
+    luminance = sum([c*x for c, x in zip(consts, comps)])
+    cname = 'white' if luminance < 140 else 'black'
+    return QtGui.QColor(cname)
 
-class CalendarDelegate(QtGui.QStyledItemDelegate):
+class CalendarDelegate(QtWidgets.QStyledItemDelegate):
     def paint(self, painter, option, index):
-        options = QtGui.QStyleOptionViewItemV4(option)
-        self.initStyleOption(options,index)
-        
-        style = QtGui.QApplication.style() if options.widget is None else options.widget.style()
+        options = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+
+        style = QtWidgets.QApplication.style() if options.widget is None else options.widget.style()
 
         options.text = ""
-        style.drawControl(QtGui.QStyle.CE_ItemViewItem, options, painter);
+        style.drawControl(QtWidgets.QStyle.CE_ItemViewItem, options, painter);
 
         painter.save()
         painter.translate(options.rect.topLeft())
@@ -116,7 +119,7 @@ class CalendarDelegate(QtGui.QStyledItemDelegate):
 
         for entry in entries[:visible_count]:
             entry_back_color = entry.bkcolor
-            entry_front_color = GetContrastingTextColor(entry_back_color)
+            entry_front_color = rgb_contrasting_foreground(entry_back_color)
 
             eventRect = index.internalPointer().entryBlock(entry, index,
                     options.rect.translated(-options.rect.topLeft()))
@@ -134,6 +137,17 @@ class CalendarDelegate(QtGui.QStyledItemDelegate):
         entries = index.internalPointer().entryList(index)
         return QtCore.QSize(80, (len(entries)+1)*event_height+1)
 
+def test_calendar_entries():
+    colors = 'white, black, red, darkRed, green, darkGreen, blue, darkBlue, cyan, darkCyan, magenta, darkMagenta, yellow, darkYellow, gray, darkGray, lightGray'.split(', ')
+
+    tests = []
+    base = datetime.date(2012, 4, 15)
+    for i, c in enumerate(colors):
+        d = base+datetime.timedelta(days=i/3)
+        x = {"start": d, "end": d, "text": c, "bkcolor": QtGui.QColor(c)}
+        tests.append(x)
+    return tests
+
 class CalendarView(TableView):
     """
     Clickable calendar view.
@@ -141,18 +155,18 @@ class CalendarView(TableView):
     >>> app = qtapp()
     >>> c = CalendarView()
     >>> c.setDateRange(datetime.date(2012, 3, 18), 6)
-    >>> c.setEventList([
+    >>> c.setEventList(test_calendar_entries()+[
     ...     {"start": datetime.date(2012, 3, 21), "end": datetime.date(2012, 3, 25), "text": "vacation"}, 
     ...     {"start": datetime.date(2012, 3, 28), "end": datetime.date(2012, 4, 4), "text": "nicer vacation"}, 
     ...     {"start": datetime.date(2012, 4, 9), "end": datetime.date(2012, 4, 9), "text": "wife birthday"}],
     ...     startDate = lambda x: x["start"],
     ...     endDate = lambda x: x["end"],
     ...     text = lambda x: x["text"],
-    ...     bkColor = lambda x: QtGui.QColor(0, 0, 0))
+    ...     bkColor = lambda x: x.get('bkcolor', QtGui.QColor(128, 128, 128)))
     """
-    doubleClickCalendarEvent = Signal(object)
-    contextMenuCalendarEvent = Signal(QtCore.QPoint, object)
-    eventSelectionChanged = Signal()
+    doubleClickCalendarEvent = QtCore.Signal(object)
+    contextMenuCalendarEvent = QtCore.Signal(QtCore.QPoint, object)
+    eventSelectionChanged = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(CalendarView, self).__init__(parent)
@@ -192,9 +206,9 @@ class CalendarView(TableView):
 
             datarows.append(CalendarRow(day0, calWeek))
 
-        self.rows = PBTableModel(columns=[ModelColumn("day{0}".format(d),str,day_names[d]) for d in range(7)])
+        self.rows = ObjectQtModel(columns=[Column("day{0}".format(d), day_names[d]) for d in range(7)])
         self.setModel(self.rows)
-        self.rows.reset_content_from_list(datarows)
+        self.rows.set_rows(datarows)
         self.selModel = self.selectionModel()
         self.selModel.selectionChanged.connect(self.selectionChanged)
 
@@ -207,7 +221,7 @@ class CalendarView(TableView):
             return []
         return [x.internalPointer().date(x) for x in m.selectedIndexes()]
 
-    def selectDate(self, d, selMode=QtGui.QItemSelectionModel.Select):
+    def selectDate(self, d, selMode=QtCore.QItemSelectionModel.Select):
         m = self.selectionModel()
         index = QtCore.QModelIndex() # TODO:  write this code
         m.select(index, selMode)
@@ -235,30 +249,34 @@ class CalendarView(TableView):
             event.accept()
         super(CalendarView, self).contextMenuEvent(event)
 
-class CalendarTopNav(QtGui.QWidget):
+def laywid(lay, wid):
+    lay.addWidget(wid)
+    return wid
+
+class CalendarTopNav(QtWidgets.QWidget):
     """
     >>> app = qtapp()
     >>> c = CalendarTopNav()
     """
-    relativeMove = Signal(int)
-    absoluteMove = Signal(object)
+    relativeMove = QtCore.Signal(int)
+    absoluteMove = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super(CalendarTopNav, self).__init__(parent)
 
-        main = QtGui.QHBoxLayout(self)
+        main = QtWidgets.QHBoxLayout(self)
         main.setContentsMargins(0, 0, 0, 0)
         self.earlier = [
-            LayoutWidget(main, QtGui.QPushButton("<<<")),
-            LayoutWidget(main, QtGui.QPushButton("<<")),
-            LayoutWidget(main, QtGui.QPushButton("<"))]
+            laywid(main, QtWidgets.QPushButton("<<<")),
+            laywid(main, QtWidgets.QPushButton("<<")),
+            laywid(main, QtWidgets.QPushButton("<"))]
         self.earlier.reverse()
-        self.month_label = LayoutWidget(main, QtGui.QLabel("&Month:"))
-        self.month = LayoutWidget(main, QtGui.QLineEdit())
+        self.month_label = laywid(main, QtWidgets.QLabel("&Month:"))
+        self.month = laywid(main, QtWidgets.QLineEdit())
         self.later = [
-            LayoutWidget(main, QtGui.QPushButton(">")),
-            LayoutWidget(main, QtGui.QPushButton(">>")),
-            LayoutWidget(main, QtGui.QPushButton(">>>"))]
+            laywid(main, QtWidgets.QPushButton(">")),
+            laywid(main, QtWidgets.QPushButton(">>")),
+            laywid(main, QtWidgets.QPushButton(">>>"))]
         for b in self.earlier + self.later:
             b.setMaximumWidth(40)
         self.month_label.setBuddy(self.month)

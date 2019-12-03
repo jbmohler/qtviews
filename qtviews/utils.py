@@ -1,4 +1,4 @@
-from PySide import QtCore, QtGui
+from PySide2 import QtCore, QtWidgets
 
 _test_app = None
 
@@ -11,7 +11,7 @@ def qtapp():
     >>> # put test code here
     """
     global _test_app
-    _test_app = QtGui.QApplication.instance()
+    _test_app = QtWidgets.QApplication.instance()
     if _test_app is None:
-        _test_app = QtGui.QApplication([])
+        _test_app = QtWidgets.QApplication([])
     return _test_app

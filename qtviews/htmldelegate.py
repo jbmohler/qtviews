@@ -7,7 +7,7 @@
 ##############################################################################
 
 from qtalchemy import *
-from PySide import QtCore, QtGui
+from PySide2 import QtCore, QtGui
 
 class HTMLDelegate(QtGui.QStyledItemDelegate):
     def paint(self, painter, option, index):

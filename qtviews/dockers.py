@@ -6,7 +6,7 @@
 #                  http://www.gnu.org/licenses/
 ##############################################################################
 
-from PySide import QtCore, QtGui
+from PySide2 import QtCore, QtWidgets
 
 class WindowMeta(object):
     def __init__(self, title, factory, settingsKey=None):
@@ -24,9 +24,9 @@ class WindowMeta(object):
         import uuid
         self.settingsKey = 'detached_{0}'.format(uuid.uuid1().hex)
 
-class Docker(QtGui.QDockWidget):
+class Docker(QtWidgets.QDockWidget):
     def __init__(self, mainWindow, child):
-        QtGui.QDockWidget.__init__(self)
+        QtWidgets.QDockWidget.__init__(self)
         self.child = child
         self.mainWindow = mainWindow
         child._docker = self
@@ -40,7 +40,7 @@ class Docker(QtGui.QDockWidget):
 
 class TabbedWorkspaceMixin(object):
     """
-    This class is designed to be a mix-in for QtGui.QMainWindow.  It places a
+    This class is designed to be a mix-in for QtWidgets.QMainWindow.  It places a
     QTabWidget as the central widget.
 
     The viewFactory is a public dictionary mapping type names to callables for
@@ -49,7 +49,7 @@ class TabbedWorkspaceMixin(object):
     section.
     """
     def initTabbedWorkspace(self):
-        self.workspace = QtGui.QTabWidget()
+        self.workspace = QtWidgets.QTabWidget()
         self.setCentralWidget(self.workspace)
         self.workspace.setDocumentMode(True)
         self.workspace.setTabsClosable(True)
@@ -163,7 +163,7 @@ class TabbedWorkspaceMixin(object):
         """
         Add a dock managed window.  Tabify or dock as according to settings.
 
-        :param widget:  widget is a QtGui.QWidget derived class or a key in the
+        :param widget:  widget is a QtWidgets.QWidget derived class or a key in the
             viewFactory dictionary.  If widget is a key in the viewFactory
             dictionary, then the associated callable is used to construct the
             widget.
@@ -171,7 +171,7 @@ class TabbedWorkspaceMixin(object):
             docked window or tabbed window respectively
 
         """
-        if not isinstance(widget, QtGui.QWidget):
+        if not isinstance(widget, QtWidgets.QWidget):
             assert factory == widget or factory == None, 'This is a bizarre API with a silly limitation'
             factory = widget
             widget = self.viewFactory[widget]()
@@ -261,7 +261,7 @@ class TabbedWorkspaceMixin(object):
                     self.detachVisualSettings(key))
 
     def workspaceContextMenuDocked(self, w, pnt):
-        self.menu = QtGui.QMenu()
+        self.menu = QtWidgets.QMenu()
 
         a = self.menu.addAction("Tabify")
         a.triggered.connect(lambda key=w._docker_meta.settingsKey:
@@ -274,7 +274,7 @@ class TabbedWorkspaceMixin(object):
     def workspaceContextMenuTabbed(self, pnt):
         tb = self.workspace.tabBar()
         if self.workspace.currentIndex() >= 0 and tb.tabAt(pnt) == self.workspace.currentIndex():
-            self.menu = QtGui.QMenu()
+            self.menu = QtWidgets.QMenu()
 
             w = self.workspace.currentWidget()
             a = self.menu.addAction("Add docked")
@@ -305,19 +305,19 @@ class TabbedWorkspaceMixin(object):
     def renameWindow(self, key):
         w = self.workspaceWindowByKey(key)
 
-        x = QtGui.QDialog()
-        h = QtGui.QVBoxLayout(x)
-        form = QtGui.QFormLayout()
+        x = QtWidgets.QDialog()
+        h = QtWidgets.QVBoxLayout(x)
+        form = QtWidgets.QFormLayout()
         h.addLayout(form)
-        edit = QtGui.QLineEdit()
+        edit = QtWidgets.QLineEdit()
         edit.setText(w._docker_meta.title)
         form.addRow('&Title', edit)
-        b = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel) 
+        b = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel) 
         h.addWidget(b)
         b.accepted.connect(x.accept)
         b.rejected.connect(x.reject)
         x.show()
-        if x.exec_() == QtGui.QDialog.Accepted:
+        if x.exec_() == QtWidgets.QDialog.Accepted:
             w._docker_meta.title = edit.text()
 
     def closeTab(self, index):
