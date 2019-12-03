@@ -1,33 +1,31 @@
-
-
 from qtviews import *
-from PySide import QtCore, QtGui
+from PySide2 import QtCore, QtWidgets
 
-class CatWindow(QtGui.QWidget):
+class CatWindow(QtWidgets.QWidget):
     title = 'Cat Window'
     appType = 'CatWindow'
     settingsKey = 'CatWindow'
 
     def __init__(self, parent=None):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
 
-        layout = QtGui.QHBoxLayout(self)
-        layout.addWidget(QtGui.QLabel('label for {0}'.format(self.title)))
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.addWidget(QtWidgets.QLabel('label for {0}'.format(self.title)))
 
-class PigWindow(QtGui.QWidget):
+class PigWindow(QtWidgets.QWidget):
     title = 'Pig Window'
     appType = 'PigWindow'
     settingsKey = 'PigWindow'
 
     def __init__(self, parent=None):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
 
-        layout = QtGui.QHBoxLayout(self)
-        layout.addWidget(QtGui.QLabel('label for {0}'.format(self.title)))
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.addWidget(QtWidgets.QLabel('label for {0}'.format(self.title)))
 
-class Main(QtGui.QMainWindow, TabbedWorkspaceMixin):
+class Main(QtWidgets.QMainWindow, TabbedWorkspaceMixin):
     def __init__(self):
-        QtGui.QMainWindow.__init__(self)
+        QtWidgets.QMainWindow.__init__(self)
         self.initTabbedWorkspace()
         self.updateViewFactory({"Pig": PigWindow, "Cat": CatWindow})
         self.setWindowTitle('Docked Window Test')
@@ -38,7 +36,7 @@ class Main(QtGui.QMainWindow, TabbedWorkspaceMixin):
 
 
 if __name__ == '__main__':
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
     app.setOrganizationName("Mohler")
     app.setOrganizationDomain("kiwistrawberry.us")
     app.setApplicationName("DockerTest")
