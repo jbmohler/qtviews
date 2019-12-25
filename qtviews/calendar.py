@@ -285,8 +285,12 @@ class CalendarTopNav(QtWidgets.QWidget):
         self.setMaximumHeight(self.month.sizeHint().height())
 
         for i in range(3):
-            self.earlier[i].clicked.connect(lambda index=-i-1:self.relativeMove.emit(index))
-            self.later[i].clicked.connect(lambda index=+i+1:self.relativeMove.emit(index))
+            # need to fancy-dance the callables to get the correct closure in
+            # the face of ambiguious Qt signal parameters.
+            _earlier = lambda *args, index=-i-1: self.relativeMove.emit(index)
+            _later = lambda *args, index=+i+1: self.relativeMove.emit(index)
+            self.earlier[i].clicked.connect(_earlier)
+            self.later[i].clicked.connect(_later)
 
     def input_reset(self):
         try:
