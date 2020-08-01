@@ -4,7 +4,7 @@ QtViews is a helper library for creating super cool tabbed and docked
 combination workspaces for Qt (that is, PySide2/PyQt5) applications.
 
 The premier component is the TabbedWorkspaceMixin which is a mix-in for classes
-derived from QtGui.QMainWindow.
+derived from QtWidgets.QMainWindow.
 
 The second component is a calendar view.
 

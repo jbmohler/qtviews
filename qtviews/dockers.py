@@ -6,12 +6,14 @@
 #                  http://www.gnu.org/licenses/
 ##############################################################################
 
+import uuid
 from PySide2 import QtCore, QtWidgets
 
 class WindowMeta(object):
-    def __init__(self, title, factory, settingsKey=None):
+    def __init__(self, title, factory, settingsKey=None, fixedpos=False):
         self.title = title
         self.factory = factory
+        self.fixedpos = fixedpos
         if settingsKey is None:
             self.settingsKey = factory
         else:
@@ -21,7 +23,6 @@ class WindowMeta(object):
         return self.settingsKey.startswith('detached_')
 
     def detach(self):
-        import uuid
         self.settingsKey = 'detached_{0}'.format(uuid.uuid1().hex)
 
 class Docker(QtWidgets.QDockWidget):
@@ -159,7 +160,7 @@ class TabbedWorkspaceMixin(object):
         if w is None:
             self.addWorkspaceWindow(widget, title, factory, settingsKey, addto)
 
-    def addWorkspaceWindow(self, widget, title=None, factory=None, settingsKey=None, addto=None):
+    def addWorkspaceWindow(self, widget, title=None, factory=None, settingsKey=None, addto=None, fixedpos=False):
         """
         Add a dock managed window.  Tabify or dock as according to settings.
 
@@ -182,7 +183,7 @@ class TabbedWorkspaceMixin(object):
             factory = widget.factory
         if settingsKey is None and hasattr(widget, 'settingsKey'):
             settingsKey = widget.settingsKey
-        widget._docker_meta = WindowMeta(title, factory, settingsKey)
+        widget._docker_meta = WindowMeta(title, factory, settingsKey, fixedpos=fixedpos)
         if addto == "dock":
             self._addDocked(widget)
         else:
@@ -230,6 +231,7 @@ class TabbedWorkspaceMixin(object):
         Remove a tabbed window from the tab widget and add it as a dock window.
         """
         w = self.workspaceWindowByKey(settingsKey)
+        print(settingsKey)
         if w is not None:
             self._addDocked(w)
 
@@ -248,23 +250,26 @@ class TabbedWorkspaceMixin(object):
     def addSharedContextActions(self, w, menu):
         # rename, close, detach from command
         a = menu.addAction("Close")
-        a.triggered.connect(lambda key=w._docker_meta.settingsKey:
+        a.triggered.connect(lambda *args, key=w._docker_meta.settingsKey:
                 self.closeWindow(w._docker_meta.settingsKey))
 
         a = menu.addAction("Rename")
-        a.triggered.connect(lambda key=w._docker_meta.settingsKey:
+        a.triggered.connect(lambda *args, key=w._docker_meta.settingsKey:
                 self.renameWindow(key))
 
         if not w._docker_meta.is_detached():
             a = menu.addAction("Detach Visual Settings")
-            a.triggered.connect(lambda key=w._docker_meta.settingsKey:
+            a.triggered.connect(lambda *args, key=w._docker_meta.settingsKey:
                     self.detachVisualSettings(key))
 
     def workspaceContextMenuDocked(self, w, pnt):
+        if w._docker_meta.fixedpos:
+            return
+
         self.menu = QtWidgets.QMenu()
 
         a = self.menu.addAction("Tabify")
-        a.triggered.connect(lambda key=w._docker_meta.settingsKey:
+        a.triggered.connect(lambda *args, key=w._docker_meta.settingsKey:
                 self.undockWorkspaceWindow(key))
 
         self.addSharedContextActions(w, self.menu)
@@ -274,11 +279,14 @@ class TabbedWorkspaceMixin(object):
     def workspaceContextMenuTabbed(self, pnt):
         tb = self.workspace.tabBar()
         if self.workspace.currentIndex() >= 0 and tb.tabAt(pnt) == self.workspace.currentIndex():
+            w = self.workspace.currentWidget()
+            if w._docker_meta.fixedpos:
+                return
+
             self.menu = QtWidgets.QMenu()
 
-            w = self.workspace.currentWidget()
             a = self.menu.addAction("Add docked")
-            a.triggered.connect(lambda key=w._docker_meta.settingsKey:
+            a.triggered.connect(lambda *args, key=w._docker_meta.settingsKey:
                     self.dockWorkspaceWindow(key))
 
             self.addSharedContextActions(w, self.menu)
@@ -323,19 +331,22 @@ class TabbedWorkspaceMixin(object):
     def closeTab(self, index):
         self.workspace.removeTab(index)
 
-    def tabsInWindowMenu(self):
-        for i in range(self.workspace.count()):
-            child = self.workspace.widget(i)
-            if i < 9:
-                text = self.tr("&{0} {1}".format(i+1, child._docker_meta.title))
+    def tabsInWindowMenu(self, winmenu):
+        actionlist = []
+        for index in range(self.workspace.count()):
+            child = self.workspace.widget(index)
+            if index < 9:
+                text = self.tr("&{0} {1}".format(index+1, child._docker_meta.title))
             else:
                 text = self.tr("&{1}".format(child._docker_meta.title))
 
-            action = self.windowMenu.addAction(text)
+            action = winmenu.addAction(text)
             action.setCheckable(True)
             action.setChecked(child == self.workspace.currentWidget())
-            action.triggered.connect(lambda checked,
-                    key=child._docker_meta.settingsKey: self.selectTab(key))
+            action.triggered.connect(lambda *args, key=child._docker_meta.settingsKey: self.selectTab(key))
+
+            actionlist.append(action)
+        return actionlist
 
     def selectTab(self, settingsKey):
         desired = self.workspaceWindowByKey(settingsKey)
@@ -346,4 +357,3 @@ class TabbedWorkspaceMixin(object):
                 self.workspace.setCurrentWidget(desired)
             return desired
         return None
-
